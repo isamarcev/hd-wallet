@@ -11,18 +11,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.wallet.dependencies import get_ethereum_manager, get_session
 from apps.wallet.manager import EthereumManager
+from apps.wallet.schemas import CreateDerivation
 
 wallet_router = APIRouter()
 
 
-@wallet_router.post("/create-wallet/")
+@wallet_router.get("/create-wallet/")
 async def create_wallet(
         manager: EthereumManager = Depends(get_ethereum_manager),
-        db_session: AsyncSession = Depends(get_session)
+        db_session: AsyncSession = Depends(get_session),
 ):
     new_wallet = await manager.create_wallet(db_session)
     return new_wallet.dict()
 
+
+@wallet_router.post("/create-derivations/")
+async def create_derivations_wallets(
+        request_info: CreateDerivation,
+        manager: EthereumManager = Depends(get_ethereum_manager),
+):
+    response = manager.create_derivations(request_info)
+    return response
 
 @wallet_router.get("/{wallet}/")
 async def create_determinated_wallet(

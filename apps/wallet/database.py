@@ -11,9 +11,9 @@ class EthereumDatabase:
     def __init__(self, wallet_model: Type[Wallet]):
         self.wallet_model = wallet_model
 
-
     async def create_wallet(self, wallet: CreateWallet, db: AsyncSession):
         wallet_instance = self.wallet_model(**wallet.dict())
         db.add(wallet_instance)
         await db.commit()
+        print(wallet_instance, "WALLET INSTANCS")
         return wallet_instance
