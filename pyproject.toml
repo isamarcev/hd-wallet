@@ -21,6 +21,9 @@ toml = "^0.10.2"
 sqlalchemy = "^1.4.46"
 fastapi = "^0.89.1"
 hdwallet = "^2.2.1"
+starlette = "0.22.0"
+fastapi-helper = "^0.0.12"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 
