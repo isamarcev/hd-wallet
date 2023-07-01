@@ -39,24 +39,3 @@ class EthereumClient(BaseClient):
         ether_balance = Web3.from_wei(balance, 'ether')
         return ether_balance
 
-    async def generate_mnemonic(self):
-        mnemo = mnemonic.Mnemonic('english')
-        logging.info(f"{mnemo} MNEMO PHRASE")
-        words = mnemo.generate()
-        print(words)
-        return words
-
-    async def get_pk_from_mnemonic(self, mnemonic: str):
-
-        hd_wallet = HDWallet(symbol=ETH, use_default_path=False)
-        # Account.enable_unaudited_hdwallet_features()
-        # account = Account.from_mnemonic(mnemonic)
-        hd_wallet.from_mnemonic(mnemonic)
-        path = f"m/44'/1'/0'/0/0"  # Derivation path
-
-        hd_wallet.from_path(path)
-        private_key = hd_wallet.private_key()
-        address = hd_wallet.public_key()
-        logging.info(f'{address} - {private_key}')
-        print(f'{address} - {private_key}')
-        return str(private_key)
