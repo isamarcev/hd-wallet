@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.wallet.database import EthereumDatabase
 from apps.wallet.manager import EthereumManager
-from apps.wallet.models import Wallet
+from apps.wallet.models import Wallet, Transaction
 from apps.wallet.web3_client import EthereumClient
 from config.db import async_session
 
@@ -20,7 +20,7 @@ async def get_client() -> EthereumClient:
 
 
 async def get_database() -> EthereumDatabase:
-    return EthereumDatabase(Wallet)
+    return EthereumDatabase(Wallet, Transaction)
 
 
 async def get_ethereum_manager() -> EthereumManager:

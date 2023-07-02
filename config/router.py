@@ -11,4 +11,4 @@ router = APIRouter(
     prefix="/api",
 )
 
-router.include_router(wallet_router, prefix="/wallet", tags=["Wallet"])
+router.include_router(wallet_router, prefix="/ethereum-wallet", tags=["ETH-Wallet"])

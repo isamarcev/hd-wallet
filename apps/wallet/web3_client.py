@@ -2,12 +2,14 @@ import logging
 from abc import ABC
 
 from eth_account import Account
+from eth_typing import ChecksumAddress, Address
 from hdwallet import HDWallet
 from hdwallet.symbols import ETH
+from hexbytes import HexBytes
 from web3 import Web3, eth
 from web3.middleware import geth_poa_middleware
 
-from apps.wallet.exeptions import Web3ConnectionError
+from apps.wallet.exeptions import Web3ConnectionError, TransactionError
 from config.settings import settings
 
 import mnemonic
@@ -29,6 +31,17 @@ class BaseClient(ABC):
 
 class EthereumClient(BaseClient):
 
+    def sync_send_transaction(self, from_address: str, to_address: str, amount: float, private_key: str):
+        try:
+            provider = self.provider
+            transaction = self.build_txn(provider, from_address, to_address, amount)
+            print(transaction, "transaction".upper())
+            signed_txn = provider.eth.account.sign_transaction(transaction, private_key)
+            txn_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
+            return txn_hash.hex()
+        except Exception as ex:
+            raise TransactionError(str(ex))
+
     def sync_get_balance(self, address: str):
         checksum_address = Web3.to_checksum_address(address)
         try:
@@ -39,3 +52,21 @@ class EthereumClient(BaseClient):
         ether_balance = Web3.from_wei(balance, 'ether')
         return ether_balance
 
+    @staticmethod
+    def build_txn(provider: Web3, from_address: str, to_address: str, amount: float):
+        gas_price = provider.eth.gas_price
+        gas = 21000
+        # address = Address(from_address)
+        sf = HexBytes(from_address)
+        nonce = provider.eth.get_transaction_count(sf, "latest")
+
+        txn = {
+            'chainId': provider.eth.chain_id,
+            'from': from_address,
+            'to': to_address,
+            'value': int(Web3.to_wei(amount, 'ether')),
+            'nonce': nonce,
+            'gasPrice': gas_price,
+            'gas': gas,
+        }
+        return txn

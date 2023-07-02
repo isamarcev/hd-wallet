@@ -24,6 +24,7 @@ hdwallet = "^2.2.1"
 starlette = "0.22.0"
 fastapi-helper = "^0.0.12"
 python-dotenv = "^1.0.0"
+sqlalchemy-utils = "^0.41.1"
 
 [tool.poetry.dev-dependencies]
 
