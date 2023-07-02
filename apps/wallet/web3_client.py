@@ -1,5 +1,6 @@
 import logging
 from abc import ABC
+from decimal import Decimal
 
 from eth_account import Account
 from eth_typing import ChecksumAddress, Address
@@ -30,6 +31,16 @@ class BaseClient(ABC):
 
 
 class EthereumClient(BaseClient):
+
+    def sync_get_balance(self, address: str) -> Decimal:
+        checksum_address = Web3.to_checksum_address(address)
+        try:
+            balance = self.provider.eth.get_balance(checksum_address)
+        except ValueError:
+            print("BEFORE sync GET BALANCE CONNECTION ERROR")
+            return self.sync_get_balance(address)
+        ether_balance = Web3.from_wei(balance, 'ether')
+        return ether_balance
 
     def sync_send_transaction(self, from_address: str, to_address: str, amount: float, private_key: str):
         try:
@@ -70,3 +81,13 @@ class EthereumClient(BaseClient):
             'gas': gas,
         }
         return txn
+
+    def sync_get_transaction_receipt(self, txn_hash: str):
+        hash_tnx = HexBytes(txn_hash)
+        try:
+            txn = self.provider.eth.get_transaction_receipt(hash_tnx)
+            print(txn, "TXN")
+            return txn
+        except Exception as e:
+            print(e)
+            return None

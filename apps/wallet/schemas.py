@@ -49,9 +49,15 @@ class TransactionURL(ConfigBaseModel):
     url: str
     hash: str
 
-class GetBalance(ConfigBaseModel):
-    public_key: str
+
+class TransactionResult(ConfigBaseModel):
+    hash: str
 
 
+class TransactionInfo(ConfigBaseModel):
+    block_number: int
+    status: str
+    from_address: str
+    to_address: str
 
 

@@ -14,7 +14,7 @@ from web3 import Web3
 from apps.wallet.database import EthereumDatabase
 from apps.wallet.exeptions import WalletIsNotDefine
 from apps.wallet.schemas import CreateWallet, CreateDerivation, SendTransaction, TransactionURL, \
-    CreateTransactionReceipt
+    CreateTransactionReceipt, TransactionResult, TransactionInfo
 from apps.wallet.web3_client import EthereumClient
 
 
@@ -103,4 +103,24 @@ class EthereumManager:
                               hash=txn_hash)
 
 
+    async def get_transaction_result(self, tnx_data: TransactionResult, db_session:AsyncSession ):
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, functools.partial(self.client.sync_get_transaction_receipt,
+                                                                    txn_hash=tnx_data.hash,
+                                                                    ))
+        if not result:
+            return {"status": "PENDING"}
+        tnx_response = TransactionInfo(
+            status="SUCCESS" if result.get("status") else "FAILED",
+            block_number=result.get("blockNumber"),
+            from_address=result.get("from"),
+            to_address=result.get("to")
+        )
+        return tnx_response.dict()
 
+    async def get_balance(self, address, db_session):
+        loop = asyncio.get_event_loop()
+        current_balance = await loop.run_in_executor(None, functools.partial(self.client.sync_get_balance,
+                                                                             address=address,
+                                                                             ))
+        return current_balance
