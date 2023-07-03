@@ -43,6 +43,7 @@ class CreateTransactionReceipt(ConfigBaseModel):
     date: datetime.datetime
     txn_fee: Union[None, str]
     status: StatusEnum
+    wallet: str
 
 
 class TransactionURL(ConfigBaseModel):
@@ -59,5 +60,26 @@ class TransactionInfo(ConfigBaseModel):
     status: str
     from_address: str
     to_address: str
+    value: float
+
+
+def convert_datetime_to_iso_8601_with_z_suffix(dt: datetime.datetime) -> str:
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+class WalletTransactions(BaseModel):
+    number: str
+    from_address: str
+    to_address: str
+    value: float
+    date: datetime.datetime
+    txn_fee: Union[None, str]
+    status: StatusEnum
+
+    class Config:
+        json_encoders = {
+            # custom output conversion for datetime
+            datetime: convert_datetime_to_iso_8601_with_z_suffix
+        }
+        orm_mode = True  # или использовать вместо BaseModel ApiSchema)
 
 

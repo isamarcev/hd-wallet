@@ -32,15 +32,17 @@ class BaseClient(ABC):
 
 class EthereumClient(BaseClient):
 
-    def sync_get_balance(self, address: str) -> Decimal:
+    def sync_get_balance(self, address: str):
         checksum_address = Web3.to_checksum_address(address)
         try:
             balance = self.provider.eth.get_balance(checksum_address)
-        except ValueError:
-            print("BEFORE sync GET BALANCE CONNECTION ERROR")
-            return self.sync_get_balance(address)
-        ether_balance = Web3.from_wei(balance, 'ether')
-        return ether_balance
+            ether_balance = Web3.from_wei(balance, 'ether')
+            return ether_balance
+        except Exception as e:
+            print(e)
+            return
+
+
 
     def sync_send_transaction(self, from_address: str, to_address: str, amount: float, private_key: str):
         try:
@@ -91,3 +93,13 @@ class EthereumClient(BaseClient):
         except Exception as e:
             print(e)
             return None
+
+    def get_transaction(self, txn_hash: str):
+        hex_hash = HexBytes(txn_hash)
+        try:
+            txn = self.provider.eth.get_transaction(hex_hash)
+            print(txn)
+            return txn
+        except Exception as E:
+            print(E)
+            return

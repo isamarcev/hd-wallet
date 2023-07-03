@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     # etherscan
     ETHERSCAN_KEY: str
+    ETHERSCAN_ENDPOINT: str
 
     # ASYNCAPI_DOCS_URL
     ASYNCAPI_DOCS_URL: str

@@ -1,4 +1,5 @@
 import json
+from typing import List
 
 from eth_account import Account
 from fastapi import APIRouter, Depends
@@ -11,12 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.wallet.dependencies import get_ethereum_manager, get_session
 from apps.wallet.manager import EthereumManager
-from apps.wallet.schemas import CreateDerivation, SendTransaction, TransactionResult
+from apps.wallet.schemas import CreateDerivation, SendTransaction, TransactionResult, WalletTransactions
 
-wallet_router = APIRouter()
+ethereum_wallet_router = APIRouter()
 
 
-@wallet_router.get("/create-wallet/")
+@ethereum_wallet_router.get("/create-wallet/")
 async def create_wallet(
         manager: EthereumManager = Depends(get_ethereum_manager),
         db_session: AsyncSession = Depends(get_session),
@@ -25,7 +26,7 @@ async def create_wallet(
     return new_wallet.dict()
 
 
-@wallet_router.post("/create-derivations/")
+@ethereum_wallet_router.post("/create-derivations/")
 async def create_derivations_wallets(
         request_info: CreateDerivation,
         manager: EthereumManager = Depends(get_ethereum_manager),
@@ -36,7 +37,7 @@ async def create_derivations_wallets(
     return response
 
 
-@wallet_router.post("/send-transaction/")
+@ethereum_wallet_router.post("/send-transaction/")
 async def send_transaction(
         transaction_info: SendTransaction,
         manager: EthereumManager = Depends(get_ethereum_manager),
@@ -46,29 +47,27 @@ async def send_transaction(
     return result
 
 
-@wallet_router.post("/get-transaction-result/")
+@ethereum_wallet_router.get("/get-transaction-result/{tnx_hash}")
 async def get_transaction_result(
-        transaction_info: TransactionResult,
+        tnx_hash: str,
         manager: EthereumManager = Depends(get_ethereum_manager),
         db_session: AsyncSession = Depends(get_session),
 ):
-    result = await manager.get_transaction_result(transaction_info, db_session)
+    result = await manager.get_transaction_result(tnx_hash, db_session)
     return result
 
 
-@wallet_router.get("/get-balance/{address}/")
+@ethereum_wallet_router.get("/get-balance/{address}/")
 async def get_balance(
         address: str,
         manager: EthereumManager = Depends(get_ethereum_manager),
         db_session: AsyncSession = Depends(get_session),
 ):
-    print(address)
     result = await manager.get_balance(address, db_session)
     return result
 
 
-
-@wallet_router.get("/{wallet}/")
+@ethereum_wallet_router.get("/{wallet}/")
 async def create_determinated_wallet(
         wallet: str,
         manager: EthereumManager = Depends(get_ethereum_manager)
@@ -87,10 +86,29 @@ async def create_determinated_wallet(
         )
         bip44_hdwallet.from_path(bip44_derivation)
         print(f"({i}) {bip44_hdwallet.path()} {bip44_hdwallet.address()} 0x{bip44_hdwallet.private_key()}")
-        child_wallets.append(f"({i}) {bip44_hdwallet.path()} {bip44_hdwallet.address()} 0x{bip44_hdwallet.private_key()} \n")
+        child_wallets.append(
+            f"({i}) {bip44_hdwallet.path()} {bip44_hdwallet.address()} 0x{bip44_hdwallet.private_key()} \n")
         bip44_hdwallet.clean_derivation()
 
     wallets = child_wallets
     print(child_wallets)
     return wallets
 
+
+@ethereum_wallet_router.get('/get_wallet_transactions/{wallet_id}'
+                            # , response_model=List[WalletTransactions]
+                            )
+async def get_wallet_transaction(
+        wallet_id: str,
+        db: AsyncSession = Depends(get_session),
+        manager: EthereumManager = Depends(get_ethereum_manager)
+):
+    response = await manager.get_wallet_transactions(wallet_id, db)
+    result = [WalletTransactions(number=s.number,
+                                 from_address=s.from_address,
+                                 to_address=s.to_address,
+                                 value=s.value,
+                                 txn_fee=float(s.txn_fee),
+                                 date=s.date,
+                                 status=s.status).dict() for s in response]
+    return result

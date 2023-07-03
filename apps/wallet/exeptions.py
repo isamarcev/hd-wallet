@@ -22,3 +22,10 @@ class TransactionError(DefaultHTTPException):
     type = "Transaction invalid"
     message = "Create transaction error"
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class WalletAddressError(DefaultHTTPException):
+    code = "Address error"
+    type = "Address invalid"
+    message = "Wallet address is invalid"
+    status_code = status.HTTP_400_BAD_REQUEST
