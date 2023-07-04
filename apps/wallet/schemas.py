@@ -12,7 +12,7 @@ class ConfigBaseModel(BaseModel):
 
 class CreateWallet(ConfigBaseModel):
     parent_wallet: Optional[str]
-    public_key: str
+    address: str
     private_key: str
     mnemonic: str
 
@@ -20,6 +20,15 @@ class CreateWallet(ConfigBaseModel):
 class CreateDerivation(ConfigBaseModel):
     mnemonic: str
     count: int = 1
+
+
+class GetMyWallets(ConfigBaseModel):
+    private_key: str
+
+
+class MyWallets(ConfigBaseModel):
+    address: str
+
 
 
 class SendTransaction(ConfigBaseModel):

@@ -17,6 +17,14 @@ class WalletIsNotDefine(DefaultHTTPException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
+class WalletDoesNotExists(DefaultHTTPException):
+    code = "Wallet is not exist"
+    type = "Wallet invalid"
+    message = "This wallet is not exist"
+    field = "from_address"
+    status_code = status.HTTP_404_NOT_FOUND
+
+
 class TransactionError(DefaultHTTPException):
     code = "Transaction error"
     type = "Transaction invalid"
@@ -29,3 +37,12 @@ class WalletAddressError(DefaultHTTPException):
     type = "Address invalid"
     message = "Wallet address is invalid"
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class MnemonicError(DefaultHTTPException):
+    code = "Mnemonic error"
+    type = "Mnemonic invalid"
+    message = "Mnemonic phrase is invalid"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+

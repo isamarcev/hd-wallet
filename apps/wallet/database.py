@@ -16,10 +16,19 @@ class EthereumDatabase:
         self.transaction_model = transaction_model
 
     async def create_wallet(self, wallet: CreateWallet, db: AsyncSession):
+        wallet_instance = await db.execute(
+            select(self.wallet_model).where(
+                self.wallet_model.private_key == wallet.private_key
+            )
+        )
+        existing_wallet = wallet_instance.scalar_one_or_none()
+
+        if existing_wallet:
+            return existing_wallet
+
         wallet_instance = self.wallet_model(**wallet.dict())
         db.add(wallet_instance)
         await db.commit()
-        print(wallet_instance, "WALLET INSTANCS")
         return wallet_instance
 
     async def create_transaction(self, transaction: CreateTransactionReceipt, db: AsyncSession):
@@ -28,10 +37,9 @@ class EthereumDatabase:
         await db.commit()
         return transaction_instance
 
-
-    async def get_wallet_by_public_key(self, public_key: str, db: AsyncSession):
+    async def get_wallet_by_address(self, address: str, db: AsyncSession):
         result = await db.execute(
-            wallet.select().where(wallet.c.public_key == public_key),
+            wallet.select().where(wallet.c.address == address),
         )
         result_data = result.first()
         return None if not result_data else self.wallet_model(**result_data._asdict())
@@ -51,6 +59,7 @@ class EthereumDatabase:
             select(self.transaction_model).where(((transaction.c.from_address == wallet) | (transaction.c.to_address == wallet))
                                                  & (transaction.c.wallet == wallet)).order_by(transaction.c.date.desc())
         )
+
         results = result.scalars().all()
         return results
 
@@ -74,3 +83,27 @@ class EthereumDatabase:
     async def add_transactions(self, transactions: List[CreateTransactionReceipt], db: AsyncSession):
         db.add_all(transactions)
         await db.commit()
+
+
+    async def get_wallet_by_private_key(self, private_key: str, db: AsyncSession):
+        result = await db.execute(
+            wallet.select().where(wallet.c.private_key == private_key),
+        )
+        result_data = result.first()
+        return None if not result_data else self.wallet_model(**result_data._asdict())
+
+    async def get_wallets_by_mnemonic(self, mnemonic: str, db: AsyncSession):
+        result = await db.execute(
+            wallet.select().where(wallet.c.mnemonic == mnemonic),
+        )
+        return [self.wallet_model(**result_data) for result_data in result.all()]
+
+
+    async def transaction_filter(self, transaction_filter, db):
+        query = select(self.transaction_model)
+        query = transaction_filter.filter(query)
+        # query = transaction_filter.sort(query)
+        print(query, "QUERY")
+        result = await db.execute(query)
+        print(result)
+        return result.scalars().all()

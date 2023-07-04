@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import functools
-from abc import abstractmethod, ABC
 
 import aiohttp
 import mnemonic
@@ -13,10 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from web3 import Web3
 
 from apps.wallet.database import EthereumDatabase
-from apps.wallet.exeptions import WalletIsNotDefine, WalletAddressError
+from apps.wallet.exeptions import WalletIsNotDefine, WalletAddressError, WalletDoesNotExists, MnemonicError
 from apps.wallet.models import Transaction
 from apps.wallet.schemas import CreateWallet, CreateDerivation, SendTransaction, TransactionURL, \
-    CreateTransactionReceipt, TransactionResult, TransactionInfo
+    CreateTransactionReceipt, WalletTransactions, TransactionInfo, GetMyWallets, MyWallets
 from apps.wallet.web3_client import EthereumClient
 from config.settings import settings
 
@@ -39,8 +38,8 @@ class EthereumManager:
         mnemo = await self.generate_mnemonic()
         hd_wallet = HDWallet(symbol=ETH, use_default_path=False)
         hd_wallet.from_mnemonic(mnemo)
-
         new_wallet = CreateWallet(
+            address=hd_wallet.p2sh_address(),
             public_key=hd_wallet.public_key(),
             private_key=hd_wallet.private_key(),
             mnemonic=hd_wallet.mnemonic()
@@ -55,8 +54,11 @@ class EthereumManager:
 
     async def create_derivations(self, request_info: CreateDerivation, db_session):
         bip44_hdwallet = BIP44HDWallet(symbol=ETH)
-        bip44_hdwallet.from_mnemonic(request_info.mnemonic)
-
+        try:
+            bip44_hdwallet.from_mnemonic(request_info.mnemonic)
+        except ValueError:
+            raise MnemonicError()
+        parent_address = bip44_hdwallet.address()
         num_wallets = request_info.count
 
         child_wallets = []
@@ -65,11 +67,11 @@ class EthereumManager:
                 cryptocurrency=EthereumMainnet, account=0, change=False, address=i
             )
             bip44_hdwallet.from_path(bip44_derivation)
-            print(f"({i}) {bip44_hdwallet.path()} {bip44_hdwallet.address()} 0x{bip44_hdwallet.private_key()}")
             child_wallet = CreateWallet(
-                public_key=bip44_hdwallet.address(),
+                address=bip44_hdwallet.address(),
                 private_key=bip44_hdwallet.private_key(),
                 mnemonic=bip44_hdwallet.mnemonic(),
+                parent_wallet=parent_address
 
             )
             await self.database.create_wallet(child_wallet, db_session)
@@ -79,9 +81,8 @@ class EthereumManager:
 
         return child_wallets
 
-
     async def send_transaction(self, transaction_info: SendTransaction, db_session: AsyncSession):
-        user_wallet = await self.database.get_wallet_by_public_key(transaction_info.from_address, db_session)
+        user_wallet = await self.database.get_wallet_by_address(transaction_info.from_address, db_session)
         if not user_wallet:
             raise WalletIsNotDefine()
         if not Web3.is_address(transaction_info.to_address):
@@ -105,7 +106,7 @@ class EthereumManager:
         return TransactionURL(url='https://sepolia.etherscan.io/tx/' + txn_hash,
                               hash=txn_hash)
 
-    async def get_transaction_result(self, tnx_data, db_session:AsyncSession ):
+    async def get_transaction_result(self, tnx_data):
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, functools.partial(self.client.get_transaction,
                                                                     txn_hash=tnx_data,
@@ -121,14 +122,14 @@ class EthereumManager:
         )
         return tnx_response.dict()
 
-    async def get_balance(self, address, db_session):
+    async def get_balance(self, address):
         loop = asyncio.get_event_loop()
         current_balance = await loop.run_in_executor(None, functools.partial(self.client.sync_get_balance,
                                                                              address=address,
                                                                              ))
         return current_balance
 
-    async def get_wallet_transactions(self, wallet: str, db: AsyncSession):
+    async def get_wallet_transactions(self, wallet: str, db: AsyncSession, tnx_filter=None):
         if not Web3.is_address(wallet):
             raise WalletAddressError()
         wallet = wallet.lower()
@@ -137,8 +138,10 @@ class EthereumManager:
             loop = asyncio.get_running_loop()
             transaction_info = await loop.run_in_executor(None, functools.partial(self.client.sync_get_transaction_receipt,
                                                                                   txn_hash=transaction.number))
-            if not transaction_info:
+            if not all([transaction_info, tnx_filter]):
                 return await self.database.get_wallet_transactions(wallet, db)
+            elif not transaction_info and tnx_filter:
+                return True
             block_number = transaction_info.blockNumber
         else:
             block_number = '0'
@@ -172,8 +175,38 @@ class EthereumManager:
                     )
                     transactions_list.append(transaction_receipt)
             await self.database.add_transactions(transactions_list, db)
-        else:
-            return await self.database.get_wallet_transactions(wallet, db)
-        x = await self.database.get_wallet_transactions(wallet, db)
-        print(x, "X")
-        return x
+        if tnx_filter:
+            return True
+        response = await self.database.get_wallet_transactions(wallet, db)
+        result = [WalletTransactions(number=s.number,
+                                     from_address=s.from_address,
+                                     to_address=s.to_address,
+                                     value=s.value,
+                                     txn_fee=float(s.txn_fee),
+                                     date=s.date,
+                                     status=s.status).dict() for s in response]
+
+        return result
+
+    async def get_user_wallets_by_private_key(self, request_info: GetMyWallets, db_session: AsyncSession):
+        user_wallet = await self.database.get_wallet_by_private_key(request_info.private_key, db_session)
+        if not user_wallet:
+            raise WalletDoesNotExists()
+        mnemonic = user_wallet.mnemonic
+        wallets = await self.database.get_wallets_by_mnemonic(mnemonic, db_session)
+        wallet_list = [MyWallets(address=instance.address) for instance in wallets]
+        return wallet_list
+
+    async def filter_transactions(self, transaction_filter, db):
+        if await self.get_wallet_transactions(transaction_filter.wallet, db, tnx_filter=True) is True:
+            result = await self.database.transaction_filter(transaction_filter, db)
+            response = [WalletTransactions(number=s.number,
+                                     from_address=s.from_address,
+                                     to_address=s.to_address,
+                                     value=s.value,
+                                     txn_fee=f"{float(s.txn_fee):.15f}",
+                                     date=s.date,
+                                     status=s.status).dict() for s in result]
+            return response
+
+
