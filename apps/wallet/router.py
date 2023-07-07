@@ -6,12 +6,12 @@ from apps.wallet.dependencies import get_ethereum_manager, get_session
 from apps.wallet.filters import TransactionFilter
 from apps.wallet.manager import EthereumManager
 from apps.wallet.schemas import CreateDerivation, SendTransaction, TransactionResult, WalletTransactions, \
-    GetMyWallets
+    GetMyWallets, WalletImport
 
 ethereum_wallet_router = APIRouter()
 
 
-@ethereum_wallet_router.get("/create-wallet/")
+@ethereum_wallet_router.get("/create-wallet/", name="create-wallet", status_code=201)
 async def create_wallet(
         manager: EthereumManager = Depends(get_ethereum_manager),
         db_session: AsyncSession = Depends(get_session),
@@ -20,7 +20,7 @@ async def create_wallet(
     return new_wallet.dict()
 
 
-@ethereum_wallet_router.post("/get-my-wallets/")
+@ethereum_wallet_router.post("/get-my-wallets/", name="get_wallets", status_code=200)
 async def get_wallets(
         request_info: GetMyWallets,
         manager: EthereumManager = Depends(get_ethereum_manager),
@@ -30,7 +30,7 @@ async def get_wallets(
     return wallet_list
 
 
-@ethereum_wallet_router.post("/create-derivations/")
+@ethereum_wallet_router.post("/create-derivations/", name="create_derivations", status_code=201)
 async def create_derivations_wallets(
         request_info: CreateDerivation,
         manager: EthereumManager = Depends(get_ethereum_manager),
@@ -41,7 +41,17 @@ async def create_derivations_wallets(
     return response
 
 
-@ethereum_wallet_router.post("/send-transaction/")
+@ethereum_wallet_router.post('/import-wallet', name="import_wallet", status_code=201)
+async def create_wallet(
+    wallet: WalletImport,
+    db: AsyncSession = Depends(get_session),
+    manager: EthereumManager = Depends(get_ethereum_manager)
+):
+    response = await manager.import_wallet(wallet, db)
+    return response
+
+
+@ethereum_wallet_router.post("/send-transaction/", name="send_transaction", status_code=201)
 async def send_transaction(
         transaction_info: SendTransaction,
         manager: EthereumManager = Depends(get_ethereum_manager),
@@ -60,7 +70,7 @@ async def get_transaction_result(
     return result
 
 
-@ethereum_wallet_router.get("/get-balance/{address}/")
+@ethereum_wallet_router.get("/get-balance/{address}/", status_code=200)
 async def get_balance(
         address: str,
         manager: EthereumManager = Depends(get_ethereum_manager),
@@ -69,12 +79,13 @@ async def get_balance(
     return result
 
 
-@ethereum_wallet_router.get('/get-wallet-transactions/{address}')
+@ethereum_wallet_router.get('/get-wallet-transactions/{address}/')
 async def get_wallet_transaction(
         address: str,
         db: AsyncSession = Depends(get_session),
         manager: EthereumManager = Depends(get_ethereum_manager)
 ):
+    print("GET_TRANSACTIONS")
     response = await manager.get_wallet_transactions(address, db)
     return response
 

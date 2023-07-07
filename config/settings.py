@@ -10,12 +10,17 @@ BASE_DIR = Path(__file__).parent.parent
 class Settings(BaseSettings):
 
     # test DB
-    # test_postgres_host: str = "localhost"
-    # test_postgres_port: int = 5432
-    # test_postgres_user: str
-    # test_postgres_password: str
-    # test_postgres_db: str
-    # test_postgres_echo: bool = False
+    TEST_POSTGRES_HOST: str = "localhost"
+    TEST_POSTGRES_PORT: int = 5432
+    TEST_POSTGRES_USER: str
+    TEST_POSTGRES_PASSWORD: str
+    TEST_POSTGRES_DB: str
+    test_postgres_echo: bool = False
+
+    TEST_TRX_PUBLIC: str
+    TEST_TRX_PRIVATE: str
+    TEST_TRX_VALUE: float
+    TEST_PURPOSE_TRX_ADDRESS: str
 
     # postgres_db
     POSTGRES_PASS: str
@@ -61,6 +66,21 @@ class Settings(BaseSettings):
             user=self.POSTGRES_USER,
             password=self.POSTGRES_PASS,
             path=f"/{self.POSTGRES_NAME}",
+        )
+
+    @property
+    def test_db_url(self) -> URL:
+        """
+        Assemble database URL from settings.
+        :return: database URL.
+        """
+        return URL.build(
+            scheme="postgresql+asyncpg",
+            host=self.TEST_POSTGRES_HOST,
+            port=self.TEST_POSTGRES_PORT,
+            user=self.TEST_POSTGRES_USER,
+            password=self.TEST_POSTGRES_PASSWORD,
+            path=f"/{self.TEST_POSTGRES_DB}",
         )
 
 

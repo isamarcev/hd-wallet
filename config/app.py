@@ -11,6 +11,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse
 from starlette.staticfiles import StaticFiles
+
+from config.logger import CustomizeLogger
 # from base_api.apps.frontend.router import front_router
 # from base_api.config.celery_utils import create_celery
 # from base_api.config.lifetime import register_shutdown_event, register_startup_event
@@ -39,9 +41,9 @@ def make_middleware() -> List[Middleware]:
     return middleware
 
 
-# def init_logging() -> None:
-#     config_path = pathlib.Path(__file__).parent.parent.with_name("logger_config.json")
-#     CustomizeLogger.make_logger(config_path)
+def init_logging() -> None:
+    config_path = pathlib.Path(__file__).parent.with_name("logger_config.json")
+    CustomizeLogger.make_logger(config_path)
 
 
 def get_application() -> FastAPI:

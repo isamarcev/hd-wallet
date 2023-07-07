@@ -102,8 +102,30 @@ class EthereumDatabase:
     async def transaction_filter(self, transaction_filter, db):
         query = select(self.transaction_model)
         query = transaction_filter.filter(query)
-        # query = transaction_filter.sort(query)
-        print(query, "QUERY")
         result = await db.execute(query)
-        print(result)
         return result.scalars().all()
+
+
+    async def get_wallet_by_public_key(self, public_key: str, db: AsyncSession):
+        result = await db.execute(
+            wallet.select().where(wallet.c.public_key == public_key),
+        )
+        result_data = result.first()
+        return None if not result_data else self.wallet_model(**result_data._asdict())
+
+    async def add_wallet(self, wallet: CreateWallet, db: AsyncSession):
+
+        wallet_instance = await db.execute(
+            select(self.wallet_model).where(
+                self.wallet_model.private_key == wallet.private_key
+            )
+        )
+        existing_wallet = wallet_instance.scalar_one_or_none()
+
+        if existing_wallet:
+            return existing_wallet
+
+        wallet_instance = self.wallet_model(**wallet.dict())
+        db.add(wallet_instance)
+        await db.commit()
+        return wallet_instance

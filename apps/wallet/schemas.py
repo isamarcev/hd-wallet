@@ -14,13 +14,15 @@ class CreateWallet(ConfigBaseModel):
     parent_wallet: Optional[str]
     address: str
     private_key: str
-    mnemonic: str
+    mnemonic: Optional[str]
 
 
 class CreateDerivation(ConfigBaseModel):
     mnemonic: str
     count: int = 1
 
+class WalletImport(BaseModel):
+    private_key: str
 
 class GetMyWallets(ConfigBaseModel):
     private_key: str
@@ -52,7 +54,7 @@ class CreateTransactionReceipt(ConfigBaseModel):
     date: datetime.datetime
     txn_fee: Union[None, str]
     status: StatusEnum
-    wallet: str
+    wallet: Optional[str]
 
 
 class TransactionURL(ConfigBaseModel):

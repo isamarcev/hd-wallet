@@ -1,9 +1,13 @@
 import asyncio
 import datetime
 import functools
+import json
+import logging
 
 import aiohttp
 import mnemonic
+from eth_keys.datatypes import PrivateKey
+from eth_utils import decode_hex
 from hdwallet import HDWallet, BIP44HDWallet
 from hdwallet.cryptocurrencies import EthereumMainnet
 from hdwallet.derivations import BIP44Derivation
@@ -12,10 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from web3 import Web3
 
 from apps.wallet.database import EthereumDatabase
-from apps.wallet.exeptions import WalletIsNotDefine, WalletAddressError, WalletDoesNotExists, MnemonicError
+from apps.wallet.exeptions import WalletIsNotDefine, WalletAddressError, WalletDoesNotExists, MnemonicError, \
+    InvalidWalletImport, WalletAlreadyExists
 from apps.wallet.models import Transaction
 from apps.wallet.schemas import CreateWallet, CreateDerivation, SendTransaction, TransactionURL, \
-    CreateTransactionReceipt, WalletTransactions, TransactionInfo, GetMyWallets, MyWallets
+    CreateTransactionReceipt, WalletTransactions, TransactionInfo, GetMyWallets, MyWallets, WalletImport
 from apps.wallet.web3_client import EthereumClient
 from config.settings import settings
 
@@ -38,8 +43,9 @@ class EthereumManager:
         mnemo = await self.generate_mnemonic()
         hd_wallet = HDWallet(symbol=ETH, use_default_path=False)
         hd_wallet.from_mnemonic(mnemo)
+        # print(json.dumps(hd_wallet.dumps(), indent=4, ensure_ascii=False))
         new_wallet = CreateWallet(
-            address=hd_wallet.p2sh_address(),
+            address=hd_wallet.p2pkh_address(),
             public_key=hd_wallet.public_key(),
             private_key=hd_wallet.private_key(),
             mnemonic=hd_wallet.mnemonic()
@@ -50,7 +56,6 @@ class EthereumManager:
         wallet = await self.generate_wallet()
         await self.database.create_wallet(wallet, db_session)
         return wallet
-
 
     async def create_derivations(self, request_info: CreateDerivation, db_session):
         bip44_hdwallet = BIP44HDWallet(symbol=ETH)
@@ -209,4 +214,20 @@ class EthereumManager:
                                      status=s.status).dict() for s in result]
             return response
 
-
+    async def import_wallet(self, wallet: WalletImport, db: AsyncSession):
+        private_key = wallet.private_key
+        print(private_key)
+        try:
+            pri_key = decode_hex(private_key)
+            pk = PrivateKey(pri_key)
+            pub_key = pk.public_key
+            public_key = pub_key.to_checksum_address()
+            hd_wallet = HDWallet(symbol=ETH)
+            hd_wallet = hd_wallet.from_private_key(private_key)
+        except Exception as e:
+            logging.info(f"INVALID {e}")
+            raise InvalidWalletImport()
+        if await self.database.get_wallet_by_public_key(public_key, db):
+            raise WalletAlreadyExists()
+        wallet = CreateWallet(private_key=private_key, address=public_key)
+        return await self.database.add_wallet(wallet, db)

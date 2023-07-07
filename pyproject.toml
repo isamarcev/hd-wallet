@@ -26,6 +26,10 @@ fastapi-helper = "^0.0.12"
 python-dotenv = "^1.0.0"
 sqlalchemy-utils = "^0.41.1"
 fastapi-filter = "^0.6.0"
+loguru = "^0.7.0"
+asgi-lifespan = "^2.1.0"
+httpx = "^0.24.1"
+eth-keys = "^0.4.0"
 
 [tool.poetry.dev-dependencies]
 

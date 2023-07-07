@@ -24,8 +24,7 @@ class BaseClient(ABC):
             provider = Web3(Web3.WebsocketProvider(settings.INFURA_API_URL))
             provider.middleware_onion.inject(geth_poa_middleware, layer=0)
             print(f"Is connected: {provider.is_connected()}")
-        except:
-            print("BEFORE WEB3 CONNECTION ERROR")
+        except Exception:
             raise Web3ConnectionError()
         return provider
 
@@ -48,7 +47,6 @@ class EthereumClient(BaseClient):
         try:
             provider = self.provider
             transaction = self.build_txn(provider, from_address, to_address, amount)
-            print(transaction, "transaction".upper())
             signed_txn = provider.eth.account.sign_transaction(transaction, private_key)
             txn_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
             return txn_hash.hex()
