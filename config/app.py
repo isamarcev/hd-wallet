@@ -6,20 +6,13 @@ from fastapi import FastAPI
 import toml
 from fastapi_helper import DefaultHTTPException
 from fastapi_helper.exceptions.validation_exceptions import init_validation_handler
-# from fastapi_helper import DefaultHTTPException
-# from fastapi_helper.exceptions.validation_exceptions import init_validation_handler
 from pydantic import ValidationError
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse
-from starlette.staticfiles import StaticFiles
+from starlette.responses import JSONResponse
 
 from config.logger import CustomizeLogger
-# from base_api.apps.frontend.router import front_router
-# from base_api.config.celery_utils import create_celery
-# from base_api.config.lifetime import register_shutdown_event, register_startup_event
-# from base_api.config.logger import CustomizeLogger
 from config.router import router
 
 
@@ -39,7 +32,6 @@ def make_middleware() -> List[Middleware]:
             allow_methods=["*"],
             allow_headers=["*"],
         ),
-        # Middleware(SQLAlchemyMiddleware),
     ]
     return middleware
 
@@ -58,28 +50,17 @@ def get_application() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         middleware=make_middleware(),
-        # openapi_tags=metadata_tags
     )
-    # app_.celery_app = create_celery()
     init_validation_handler(app=app_)
 
-    # register_startup_event(app_)
-    # register_shutdown_event(app_)
-
-    # app_.mount("/static", StaticFiles(directory="base_api/static"), name="static")
-
     app_.include_router(router)
-    # app_.include_router(front_router)
 
-    # init_logging()
+    init_logging()
 
     return app_
 
 
 app = get_application()
-
-
-# celery = app.celery_app
 
 
 @app.exception_handler(ValidationError)
@@ -117,8 +98,3 @@ async def backend_validation_handler(request: Request, exc: DefaultHTTPException
         {"detail": [content]},
         status_code=exc.status_code,
     )
-#
-#
-# @app.exception_handler(404)
-# async def custom_404_handler(_, __):
-#     return RedirectResponse("/page-not-found")

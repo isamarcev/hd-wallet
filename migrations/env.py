@@ -1,6 +1,9 @@
 import asyncio
+import os
+import sys
 from logging.config import fileConfig
 
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -9,9 +12,16 @@ from alembic import context
 
 from apps.wallet.models import Base as wallet_base
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, "local.env"))
+sys.path.append(BASE_DIR)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

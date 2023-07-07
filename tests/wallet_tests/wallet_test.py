@@ -101,7 +101,6 @@ async def test_get_balance(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_get_transactions(client: AsyncClient):
-    await asyncio.sleep(120)
     url = f'/api/ethereum-wallet/get-wallet-transactions/{data.get("address")}/'
     response = await client.get(
         url,

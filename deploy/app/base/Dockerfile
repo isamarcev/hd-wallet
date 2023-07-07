@@ -30,9 +30,6 @@ WORKDIR $PYTHONPATH
 COPY ./poetry.lock ./
 COPY ./pyproject.toml ./
 
-
-#WORKDIR /usr/src/base_api
-
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python -
 ENV PATH "/root/.local/bin:$PATH"
