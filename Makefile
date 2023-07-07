@@ -6,3 +6,12 @@ migrations:
 
 migrate:
 	alembic upgrade head
+
+run_prod:
+	poetry run uvicorn config.app:app --host 0.0.0.0 --reload --workers 3
+
+up:
+	sudo docker compose up --build
+
+down:
+	sudo docker compose down

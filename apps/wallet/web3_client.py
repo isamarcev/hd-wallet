@@ -51,6 +51,7 @@ class EthereumClient(BaseClient):
             txn_hash = provider.eth.send_raw_transaction(signed_txn.rawTransaction)
             return txn_hash.hex()
         except Exception as ex:
+            print(ex)
             raise TransactionError(str(ex))
 
     def sync_get_balance(self, address: str):

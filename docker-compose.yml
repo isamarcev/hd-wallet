@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  base_api:
+    build:
+      context: ./
+      dockerfile: ./deploy/app/base/Dockerfile
+    command: make run_prod
+
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./backend/.env
+    ports:
+      - 5432:5432
+
+  nginx:
+    build:
+      context: ./deploy/nginx/
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    depends_on:
+      - base_api
+
+volumes:
+  postgres_data:

@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+import ast
 import pathlib
 from typing import List
 from fastapi import FastAPI
 import toml
+from fastapi_helper import DefaultHTTPException
+from fastapi_helper.exceptions.validation_exceptions import init_validation_handler
 # from fastapi_helper import DefaultHTTPException
 # from fastapi_helper.exceptions.validation_exceptions import init_validation_handler
 from pydantic import ValidationError
@@ -58,7 +61,7 @@ def get_application() -> FastAPI:
         # openapi_tags=metadata_tags
     )
     # app_.celery_app = create_celery()
-    # init_validation_handler(app=app_)
+    init_validation_handler(app=app_)
 
     # register_startup_event(app_)
     # register_shutdown_event(app_)
@@ -74,6 +77,7 @@ def get_application() -> FastAPI:
 
 
 app = get_application()
+
 
 # celery = app.celery_app
 
@@ -93,18 +97,26 @@ async def validation_exception_handler(request: Request, exc: ValidationError) -
     return JSONResponse({"detail": errors}, status_code=422)
 
 
-# @app.exception_handler(DefaultHTTPException)
-# async def backend_validation_handler(request: Request, exc: DefaultHTTPException) -> JSONResponse:
-#     content = {
-#         "code": exc.code,
-#         "type": exc.type,
-#         "message": exc.message,
-#         "field": getattr(exc, "field", '')
-#     }
-#     return JSONResponse(
-#         {"detail": [content]},
-#         status_code=exc.status_code,
-#     )
+@app.exception_handler(DefaultHTTPException)
+async def backend_validation_handler(request: Request, exc: DefaultHTTPException) -> JSONResponse:
+    try:
+        content = {
+            "code": exc.code,
+            "type": exc.type,
+            "message": ast.literal_eval(exc.message),
+            "field": getattr(exc, "field", '')
+        }
+    except SyntaxError:
+        content = {
+            "code": exc.code,
+            "type": exc.type,
+            "message": exc.message,
+            "field": getattr(exc, "field", '')
+        }
+    return JSONResponse(
+        {"detail": [content]},
+        status_code=exc.status_code,
+    )
 #
 #
 # @app.exception_handler(404)

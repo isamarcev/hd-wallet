@@ -43,7 +43,6 @@ class EthereumManager:
         mnemo = await self.generate_mnemonic()
         hd_wallet = HDWallet(symbol=ETH, use_default_path=False)
         hd_wallet.from_mnemonic(mnemo)
-        # print(json.dumps(hd_wallet.dumps(), indent=4, ensure_ascii=False))
         new_wallet = CreateWallet(
             address=hd_wallet.p2pkh_address(),
             public_key=hd_wallet.public_key(),
@@ -143,7 +142,7 @@ class EthereumManager:
             loop = asyncio.get_running_loop()
             transaction_info = await loop.run_in_executor(None, functools.partial(self.client.sync_get_transaction_receipt,
                                                                                   txn_hash=transaction.number))
-            if not all([transaction_info, tnx_filter]):
+            if not transaction_info and not tnx_filter:
                 return await self.database.get_wallet_transactions(wallet, db)
             elif not transaction_info and tnx_filter:
                 return True
@@ -163,7 +162,7 @@ class EthereumManager:
                 if await self.database.get_transaction_by_hash(result['hash'], wallet, db):
                     data = {
                         'date': datetime.datetime.fromtimestamp(int(result['timeStamp'])),
-                        'txn_fee': str(Web3.from_wei((int(result['gasPrice']) * int(result['gasUsed'])), 'ether')),
+                        'txn_fee': '{:.18f}'.format(float(str(Web3.from_wei((int(result['gasPrice']) * int(result['gasUsed'])), 'ether')))),
                         'status': ('Success' if result['txreceipt_status'] == '1' else 'Failed')
                     }
                     await self.database.update_transaction_by_hash(result['hash'], wallet, data, db)
@@ -174,7 +173,7 @@ class EthereumManager:
                         to_address=result['to'],
                         value=float(Web3.from_wei(int(result['value']), 'ether')),
                         date=datetime.datetime.fromtimestamp(int(result['timeStamp'])),
-                        txn_fee=str(Web3.from_wei((int(result['gasPrice']) * int(result['gasUsed'])), 'ether')),
+                        txn_fee='{:.18f}'.format(float(str(Web3.from_wei((int(result['gasPrice']) * int(result['gasUsed'])), 'ether')))),
                         status=('Success' if result['txreceipt_status'] == '1' else 'Failed'),
                         wallet=wallet
                     )
@@ -187,7 +186,7 @@ class EthereumManager:
                                      from_address=s.from_address,
                                      to_address=s.to_address,
                                      value=s.value,
-                                     txn_fee=float(s.txn_fee),
+                                     txn_fee=s.txn_fee,
                                      date=s.date,
                                      status=s.status).dict() for s in response]
 
@@ -216,14 +215,11 @@ class EthereumManager:
 
     async def import_wallet(self, wallet: WalletImport, db: AsyncSession):
         private_key = wallet.private_key
-        print(private_key)
         try:
             pri_key = decode_hex(private_key)
             pk = PrivateKey(pri_key)
             pub_key = pk.public_key
             public_key = pub_key.to_checksum_address()
-            hd_wallet = HDWallet(symbol=ETH)
-            hd_wallet = hd_wallet.from_private_key(private_key)
         except Exception as e:
             logging.info(f"INVALID {e}")
             raise InvalidWalletImport()

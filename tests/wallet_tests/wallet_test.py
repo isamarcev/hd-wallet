@@ -73,8 +73,7 @@ async def test_import_wallet(client: AsyncClient, fastapi_app: FastAPI):
     print(response.json())
     assert response.status_code == 201
 
-#
-# #
+
 @pytest.mark.anyio
 async def test_send_transaction(client: AsyncClient, fastapi_app: FastAPI):
     url = fastapi_app.url_path_for("send_transaction")
@@ -88,7 +87,6 @@ async def test_send_transaction(client: AsyncClient, fastapi_app: FastAPI):
         url,
         json=payload.dict()
     )
-    data["tnx_hash"] = response.json().get("hash")
     assert response.status_code == 201
 
 
@@ -103,13 +101,11 @@ async def test_get_balance(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_get_transactions(client: AsyncClient):
-    await asyncio.sleep(40)
-
+    await asyncio.sleep(120)
     url = f'/api/ethereum-wallet/get-wallet-transactions/{data.get("address")}/'
     response = await client.get(
         url,
     )
-    print(response.json())
     assert response.status_code == 200
 
 
